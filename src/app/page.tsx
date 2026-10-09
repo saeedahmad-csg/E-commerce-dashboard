@@ -14,6 +14,7 @@ import { AnalyticsCharts } from '@/components/AnalyticsCharts';
 import { OrderTable } from '@/components/OrderTable';
 import { GoogleSheetModal } from '@/components/GoogleSheetModal';
 import {
+  Store,
   RefreshCw,
   PlusCircle,
   Bell,
