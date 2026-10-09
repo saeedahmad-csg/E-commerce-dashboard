@@ -11,17 +11,27 @@ const SERVICE_ACCOUNT_FILE = path.join(process.cwd(), 'gen-lang-client-076463840
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+let lastAuthError = '';
+
 function getGoogleAuth(scopes: string[]) {
+  lastAuthError = '';
   // If provided in Vercel environment variables as stringified JSON:
   if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
     try {
-      const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+      const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY.trim();
+      const credentials = JSON.parse(raw);
+      // Ensure private_key newlines are unescaped properly
+      if (credentials.private_key) {
+        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+      }
       return new google.auth.GoogleAuth({
         credentials,
         scopes,
       });
-    } catch (e) {
+    } catch (e: any) {
+      lastAuthError = `Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY JSON: ${e?.message || e}`;
       console.error('Error parsing GOOGLE_SERVICE_ACCOUNT_KEY env var:', e);
+      return null;
     }
   }
 
@@ -33,6 +43,7 @@ function getGoogleAuth(scopes: string[]) {
     });
   }
 
+  lastAuthError = 'GOOGLE_SERVICE_ACCOUNT_KEY environment variable is not defined or empty.';
   return null;
 }
 
@@ -41,7 +52,7 @@ export async function GET() {
     const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
     if (!auth) {
       return NextResponse.json(
-        { error: 'Service account credentials not found (set GOOGLE_SERVICE_ACCOUNT_KEY or provide key file).' },
+        { error: lastAuthError || 'Service account credentials not found.' },
         { status: 500 }
       );
     }

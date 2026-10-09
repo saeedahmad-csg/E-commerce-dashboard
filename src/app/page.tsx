@@ -22,6 +22,7 @@ import {
   Moon,
   CheckCircle2,
   Radio,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('Syncing live...');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Quick order addition modal / state for demonstration
@@ -68,12 +70,15 @@ export default function DashboardPage() {
       const data = await res.json();
       if (res.ok && data.orders && data.orders.length > 0) {
         setOrders(data.orders);
+        setSyncError(null);
         setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      } else if (!isSilent && data.error) {
+      } else if (data.error) {
         console.warn('Google Sheets API note:', data.error);
+        setSyncError(data.error);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching live sheets:', err);
+      if (!isSilent) setSyncError(err?.message || 'Network error fetching sheets');
     } finally {
       if (!isSilent) setIsSyncing(false);
       setIsLoadingInitial(false);
@@ -258,6 +263,30 @@ export default function DashboardPage() {
 
         {/* Main Dashboard Workspace */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Google Sheets Sync Error Alert */}
+          {syncError && (
+            <div className="rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-300 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                  Google Sheet Sync Error
+                </h4>
+                <p className="text-xs text-rose-800 dark:text-rose-300 mt-0.5 break-all">
+                  {syncError}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchLiveSheet(false)}
+                className="px-3 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shrink-0"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* Operations Alert Banner for Pending Orders */}
           {metrics.pendingOrdersCount > 0 && (
             <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 dark:border-amber-800 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
