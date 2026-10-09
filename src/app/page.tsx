@@ -14,8 +14,6 @@ import { AnalyticsCharts } from '@/components/AnalyticsCharts';
 import { OrderTable } from '@/components/OrderTable';
 import { GoogleSheetModal } from '@/components/GoogleSheetModal';
 import {
-  Store,
-  FileSpreadsheet,
   RefreshCw,
   PlusCircle,
   Bell,
@@ -232,17 +230,6 @@ export default function DashboardPage() {
                 className="p-2 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
-              </button>
-
-              {/* Sheet Integration & Clear Data Modal Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsSheetModalOpen(true)}
-                title="Google Sheet Integration & Data Controls"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">Sheet Settings</span>
               </button>
 
 
