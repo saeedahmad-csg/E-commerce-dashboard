@@ -4,26 +4,48 @@ import path from 'path';
 import fs from 'fs';
 import { Order, OrderStatus } from '@/types/order';
 
-const SPREADSHEET_ID = '15pMvy6wDYyzl1FRxU4mr00BEIJYeca2XLIfrTty-91g';
+const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '15pMvy6wDYyzl1FRxU4mr00BEIJYeca2XLIfrTty-91g';
 const SERVICE_ACCOUNT_FILE = path.join(process.cwd(), 'gen-lang-client-0764638400-312481755508.json');
 
 // Force dynamic fetch so Next.js doesn't cache sheet results
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+function getGoogleAuth(scopes: string[]) {
+  // If provided in Vercel environment variables as stringified JSON:
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    try {
+      const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+      return new google.auth.GoogleAuth({
+        credentials,
+        scopes,
+      });
+    } catch (e) {
+      console.error('Error parsing GOOGLE_SERVICE_ACCOUNT_KEY env var:', e);
+    }
+  }
+
+  // Fallback to local service account file (Local development)
+  if (fs.existsSync(SERVICE_ACCOUNT_FILE)) {
+    return new google.auth.GoogleAuth({
+      keyFile: SERVICE_ACCOUNT_FILE,
+      scopes,
+    });
+  }
+
+  return null;
+}
+
 export async function GET() {
   try {
-    if (!fs.existsSync(SERVICE_ACCOUNT_FILE)) {
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
+    if (!auth) {
       return NextResponse.json(
-        { error: 'Service account credentials file not found on server.' },
+        { error: 'Service account credentials not found (set GOOGLE_SERVICE_ACCOUNT_KEY or provide key file).' },
         { status: 500 }
       );
     }
 
-    const auth = new google.auth.GoogleAuth({
-      keyFile: SERVICE_ACCOUNT_FILE,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
 
     const sheets = google.sheets({ version: 'v4', auth });
 
@@ -141,17 +163,13 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    if (!fs.existsSync(SERVICE_ACCOUNT_FILE)) {
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets']);
+    if (!auth) {
       return NextResponse.json(
-        { error: 'Service account credentials file not found on server.' },
+        { error: 'Service account credentials not found.' },
         { status: 500 }
       );
     }
-
-    const auth = new google.auth.GoogleAuth({
-      keyFile: SERVICE_ACCOUNT_FILE,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
 
     const sheets = google.sheets({ version: 'v4', auth });
 
@@ -186,10 +204,10 @@ export async function DELETE() {
 
 export async function POST(req: Request) {
   try {
-
-    if (!fs.existsSync(SERVICE_ACCOUNT_FILE)) {
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/spreadsheets']);
+    if (!auth) {
       return NextResponse.json(
-        { error: 'Service account credentials file not found on server.' },
+        { error: 'Service account credentials not found.' },
         { status: 500 }
       );
     }
@@ -197,10 +215,6 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const count = Math.min(Math.max(Number(body.count) || 6769, 1), 10000);
 
-    const auth = new google.auth.GoogleAuth({
-      keyFile: SERVICE_ACCOUNT_FILE,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
 
     const sheets = google.sheets({ version: 'v4', auth });
     const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });

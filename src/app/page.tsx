@@ -86,14 +86,29 @@ export default function DashboardPage() {
     fetchLiveSheet(false);
   }, [fetchLiveSheet]);
 
-  // Real-time automatic synchronization every 10 seconds
+  // Real-time automatic synchronization: continuous fast 2.5s polling (respecting Google Sheets quotas)
   useEffect(() => {
     if (!autoSyncEnabled) return;
-    const interval = setInterval(() => {
-      fetchLiveSheet(true);
-    }, 10000);
-    return () => clearInterval(interval);
+
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    const poll = async () => {
+      await fetchLiveSheet(true);
+      if (isMounted) {
+        // Wait 2.5 seconds after each successful response before triggering next
+        timeoutId = setTimeout(poll, 2500);
+      }
+    };
+
+    timeoutId = setTimeout(poll, 2500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [autoSyncEnabled, fetchLiveSheet]);
+
 
   // Handle Google Sheet sync
   const handleSyncGoogleSheet = async (csvUrl: string) => {
