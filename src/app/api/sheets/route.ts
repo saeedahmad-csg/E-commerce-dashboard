@@ -15,10 +15,26 @@ let lastAuthError = '';
 
 function getGoogleAuth(scopes: string[]) {
   lastAuthError = '';
-  // If provided in Vercel environment variables as stringified JSON:
+  // If provided in Vercel environment variables:
   if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
     try {
-      const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY.trim();
+      let raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY.trim();
+
+      // If wrapped in quotes, strip them
+      if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+        raw = raw.slice(1, -1);
+      }
+
+      // Check if it's base64 encoded
+      if (!raw.startsWith('{')) {
+        try {
+          const decoded = Buffer.from(raw, 'base64').toString('utf8');
+          if (decoded.startsWith('{')) {
+            raw = decoded;
+          }
+        } catch (_) {}
+      }
+
       const credentials = JSON.parse(raw);
       // Ensure private_key newlines are unescaped properly
       if (credentials.private_key) {
